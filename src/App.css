@@ -156,6 +156,14 @@
   font-family: monospace;
 }
 
+.paint-guide {
+  font-size: 12px;
+  color: #c9b48e;
+  margin-bottom: 12px;
+  max-width: 680px;
+  text-align: center;
+}
+
 .canvas-card {
   background: #2a2a4a;
   border-radius: 12px;
@@ -177,7 +185,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   flex-shrink: 0;
   padding: 0 16px;
 }
@@ -211,4 +219,15 @@
 
 .palette-slot.active span {
   color: #e8a020;
+}
+
+.status-line {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8f8fb8;
+  font-size: 11px;
+  background: #141432;
+  border-top: 1px solid #0f3460;
 }
