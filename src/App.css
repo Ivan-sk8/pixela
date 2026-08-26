@@ -4,6 +4,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   background: var(--color-primary);
 }
 
@@ -59,6 +60,7 @@
 .studio-body {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -134,6 +136,7 @@
 /* MAIN CONTENT */
 .main-content {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -164,12 +167,18 @@
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  max-width: 100%;
 }
 
 .canvas-card canvas {
   display: block;
   border-radius: 4px;
   image-rendering: pixelated;
+  width: min(78vmin, 640px);
+  height: auto;
+  max-width: 100%;
+  touch-action: none;
+  cursor: crosshair;
 }
 
 /* BOTTOM PALETTE */
@@ -516,5 +525,108 @@
 @media (max-width: 640px) {
   .import-step2 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- RESPONSIVE / MÓVIL ---------- */
+
+@media (max-width: 768px) {
+  .topbar {
+    height: 44px;
+    padding: 0 10px;
+  }
+
+  .topbar-title {
+    font-size: 15px;
+  }
+
+  .studio-body {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+    border-right: none;
+    border-bottom: 1px solid var(--color-primary-light);
+    padding: 6px 8px;
+    gap: 6px;
+    overflow-x: auto;
+  }
+
+  .tool-btn, .import-trigger, .export-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 8px;
+    flex-shrink: 0;
+  }
+
+  .tool-btn .tool-icon {
+    font-size: 16px;
+  }
+
+  .sidebar-spacer {
+    display: none;
+  }
+
+  .main-content {
+    padding: 10px;
+  }
+
+  .canvas-card {
+    padding: 8px;
+  }
+
+  .canvas-card canvas {
+    width: min(92vw, 92vmin);
+  }
+
+  .paint-guide {
+    font-size: 10px;
+    padding: 0 8px;
+  }
+
+  .palette-bar {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .palette-swatch {
+    width: 30px;
+    height: 30px;
+  }
+
+  .status-line {
+    font-size: 9px;
+    text-align: center;
+    padding: 0 6px;
+  }
+
+  .import-modal {
+    padding: 16px;
+    width: 96vw;
+    max-height: 94vh;
+  }
+
+  .config-col {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .tool-btn, .import-trigger, .export-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .tool-btn .tool-icon {
+    font-size: 14px;
+  }
+
+  .topbar-title {
+    font-size: 13px;
   }
 }

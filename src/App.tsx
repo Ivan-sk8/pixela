@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import './App.css'
 
-const MAX_CANVAS_PX = 512
+const MAX_CANVAS_PX = 640
 const MIN_GRID = 8
 const MAX_GRID = 64
 const DEFAULT_GRID = 32
@@ -260,35 +260,62 @@ function App() {
     ctx.strokeRect(cx + 1, cy + 1, cellSize - 2, cellSize - 2)
   }, [pixels, cursor, palette, targetMap, gridW, gridH, cellSize, canvasPxW, canvasPxH])
 
-  const executeTool = useCallback(() => {
-    const idx = cursor.y * gridW + cursor.x
-    if (tool === 'draw') {
+  const applyToolAt = useCallback((x: number, y: number, activeTool: Tool = tool) => {
+    const idx = y * gridW + x
+    if (activeTool === 'draw') {
       setPixels(prev => {
         const next = [...prev]
         next[idx] = activeColor
         return next
       })
-    } else if (tool === 'erase') {
+    } else if (activeTool === 'erase') {
       setPixels(prev => {
         const next = [...prev]
         next[idx] = null
         return next
       })
-    } else if (tool === 'picker') {
+    } else if (activeTool === 'picker') {
       const color = pixels[idx] || targetMap[idx] // Permite hacer pick de la solución si no está pintado
       if (color) {
         const slot = palette.indexOf(color)
         if (slot >= 0) setActiveSlot(slot)
       }
     }
-  }, [cursor, tool, activeColor, pixels, targetMap, palette, gridW])
+  }, [tool, activeColor, pixels, targetMap, palette, gridW])
+
+  const executeTool = useCallback(() => {
+    applyToolAt(cursor.x, cursor.y)
+  }, [applyToolAt, cursor])
+
+  const eraseAt = useCallback((x: number, y: number) => {
+    const idx = y * gridW + x
+    setPixels(prev => {
+      const next = [...prev]
+      next[idx] = null
+      return next
+    })
+  }, [gridW])
+
+  const handleCanvasPointer = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const px = (e.clientX - rect.left) * scaleX
+    const py = (e.clientY - rect.top) * scaleY
+    const col = clamp(Math.floor(px / cellSize), 0, gridW - 1)
+    const row = clamp(Math.floor(py / cellSize), 0, gridH - 1)
+    setCursor({ x: col, y: row })
+    applyToolAt(col, row)
+  }, [cellSize, gridW, gridH, applyToolAt])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (importOpen) return // no navegar el lienzo mientras el modal está abierto
       const key = e.key.toLowerCase()
 
-      if (['w', 'a', 's', 'd', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+      if (['w', 'a', 's', 'd', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'backspace', 'delete'].includes(key)) {
         e.preventDefault()
       }
 
@@ -302,12 +329,19 @@ function App() {
         setCursor(c => ({ ...c, x: Math.min(gridW - 1, c.x + 1) }))
       } else if (key === ' ') {
         executeTool()
+      } else if (key === 'backspace' || key === 'delete') {
+        // Atajo rápido para borrar la celda actual sin cambiar de herramienta activa
+        eraseAt(cursor.x, cursor.y)
+      } else if (/^[0-9]$/.test(key)) {
+        // Los dígitos 1-9 (y 0 para el 10º) seleccionan el color de la paleta directamente
+        const slot = key === '0' ? 9 : Number(key) - 1
+        if (slot < palette.length) setActiveSlot(slot)
       }
     }
 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [executeTool, gridW, gridH, importOpen])
+  }, [executeTool, eraseAt, gridW, gridH, importOpen, cursor, palette])
 
   const handleExport = () => {
     const canvas = canvasRef.current
@@ -431,13 +465,14 @@ function App() {
         <div className="main-content">
           <div className="canvas-info">{gridW}x{gridH} &nbsp;&nbsp; Layer 1 &nbsp;&nbsp; 100%</div>
           <div className="paint-guide">
-            Selecciona un color abajo y pinta sobre los números correspondientes en la cuadrícula.
+            Toca o haz clic en la cuadrícula para pintar · Números 1-9 seleccionan color · Backspace borra la celda actual.
           </div>
           <div className="canvas-card">
             <canvas
               ref={canvasRef}
               width={canvasPxW}
               height={canvasPxH}
+              onPointerDown={handleCanvasPointer}
             />
           </div>
         </div>

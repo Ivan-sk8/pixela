@@ -18,11 +18,14 @@ body {
   background: #1a1a2e;
   color: #e0e0e0;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 #root {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
