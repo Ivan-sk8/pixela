@@ -941,16 +941,36 @@ function App() {
         <div className="main-content">
           <div className="canvas-info">{gridW}x{gridH} &nbsp;&nbsp; Layer 1 &nbsp;&nbsp; 100%</div>
           {isMobile && (
-            <div className="mobile-zoom-controls" aria-label="Controles de zoom">
-              <button onClick={() => setMobileZoom(zoom => clamp(zoom - 0.25, 1, 4))} aria-label="Alejar">−</button>
-              <span>Zoom {Math.round(mobileZoom * 100)}%</span>
-              <button onClick={() => setMobileZoom(zoom => clamp(zoom + 0.25, 1, 4))} aria-label="Acercar">+</button>
-              <button onClick={() => setMobileZoom(clamp(24 / cellSize, 1, 4))}>Auto</button>
+            <div className="mobile-zoom-controls" role="region" aria-label="Controles de zoom">
+              <button 
+                className="zoom-btn"
+                onClick={() => setMobileZoom(zoom => clamp(zoom - 0.25, 1, 4))} 
+                aria-label="Alejar"
+              >
+                −
+              </button>
+              <span className="zoom-indicator">
+                {Math.round(mobileZoom * 100)}%
+              </span>
+              <button 
+                className="zoom-btn"
+                onClick={() => setMobileZoom(zoom => clamp(zoom + 0.25, 1, 4))} 
+                aria-label="Acercar"
+              >
+                +
+              </button>
+              <button 
+                className="auto-zoom-btn"
+                onClick={() => setMobileZoom(clamp(24 / cellSize, 1, 4))}
+              >
+                Auto
+              </button>
             </div>
           )}
           <div className="paint-guide">
             Toca, arrastra o haz clic en la cuadrícula para pintar · Números 1-9 seleccionan color · Backspace borra la celda actual.
           </div>
+
           <div className="canvas-card">
             <canvas
               ref={canvasRef}
