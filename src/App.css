@@ -174,88 +174,52 @@
   display: block;
   border-radius: 4px;
   image-rendering: pixelated;
-  width: min(78vmin, 640px);
+  width: min(90vmin, 768px);
   height: auto;
   max-width: 100%;
   touch-action: none;
   cursor: crosshair;
 }
 
-/* BOTTOM PALETTE */
-.palette-bar {
-  background: #16213e;
-  border-top: 1px solid var(--color-primary-light);
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  flex-shrink: 0;
-  padding: 0 16px;
-  overflow-x: auto;
-}
-
-.palette-slot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  flex-shrink: 0;
-  position: relative;
+/* SELECTOR LATERAL DE COLORES */
+.palette-wheel {
+  position: fixed;
+  top: 50%;
+  right: 16px;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(2, 42px);
+  gap: 10px;
+  max-height: calc(100dvh - 112px);
+  padding: 10px;
+  overflow-y: auto;
+  background: rgba(22, 33, 62, 0.92);
+  border: 1px solid var(--color-primary-light);
+  border-radius: 28px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: translateY(-50%);
+  scrollbar-width: thin;
 }
 
 .palette-swatch {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 2px solid var(--color-primary-light);
-  transition: border-color 0.15s, transform 0.1s;
-}
-
-.palette-slot.active .palette-swatch {
-  border-color: var(--color-secondary);
-  transform: scale(1.15);
-  box-shadow: 0 0 8px var(--color-secondary);
-}
-
-.swatch-remove {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 16px;
-  height: 16px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 50%;
-  border: none;
-  background: #b0202f;
-  color: #fff;
-  font-size: 9px;
-  line-height: 1;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-  transition: opacity 0.15s, transform 0.1s;
-}
-
-.palette-slot:hover .swatch-remove,
-.extracted-swatch-wrap:hover .swatch-remove {
-  opacity: 1;
-}
-
-.swatch-remove:hover {
-  transform: scale(1.15);
-}
-
-.palette-slot span {
   font-family: var(--font-body);
-  font-size: 10px;
-  color: var(--color-neutral);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
-.palette-slot.active span {
-  color: var(--color-secondary);
+.palette-swatch.active {
+  border-color: var(--color-secondary);
+  transform: scale(1.25);
+  box-shadow: 0 0 0 3px rgba(255, 224, 0, 0.24), 0 4px 14px rgba(0, 0, 0, 0.4);
+  z-index: 1;
 }
 
 .status-line {
@@ -616,8 +580,18 @@
 }
 
 .extracted-swatch-wrap .swatch-remove {
+  position: absolute;
   top: -6px;
   right: -6px;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: #b0202f;
+  color: #fff;
+  cursor: pointer;
+  font-size: 9px;
+  line-height: 1;
 }
 
 .scan-tips {
@@ -741,6 +715,7 @@
 
   .main-content {
     padding: 10px;
+    padding-right: 100px;
   }
 
   .canvas-card {
@@ -796,16 +771,18 @@
     padding: 0 8px;
   }
 
-  .palette-bar {
-    height: auto;
-    flex-wrap: wrap;
+  .palette-wheel {
+    right: 6px;
+    grid-template-columns: repeat(2, 32px);
     gap: 8px;
     padding: 8px;
+    max-height: calc(100dvh - 104px);
   }
 
   .palette-swatch {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
   }
 
   .status-line {

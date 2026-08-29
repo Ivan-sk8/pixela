@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import './App.css'
 
-const MAX_CANVAS_PX = 640
+const MAX_CANVAS_PX = 768
 const MIN_GRID = 8
 const MAX_GRID = 64
 const DEFAULT_GRID = 32
 const MIN_MOBILE_ZOOM = 0.1
+const MOBILE_TARGET_CELL_PX = 29
 
 type Tool = 'draw' | 'erase' | 'picker'
 type ColorCount = 8 | 16 | 32
@@ -100,6 +101,11 @@ function toHex(r: number, g: number, b: number) {
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+function contrastColor(hex: string) {
+  const [r, g, b] = hexToRgb(hex)
+  return (r * 299 + g * 587 + b * 114) / 1000 > 160 ? '#12122A' : '#FFFFFF'
 }
 
 function colorDistance(a: [number, number, number], b: [number, number, number]) {
@@ -453,7 +459,7 @@ function App() {
       setMobileZoom(1)
       return
     }
-    setMobileZoom(Math.max(24 / cellSize, MIN_MOBILE_ZOOM))
+    setMobileZoom(Math.max(MOBILE_TARGET_CELL_PX / cellSize, MIN_MOBILE_ZOOM))
   }, [isMobile, cellSize])
 
   useEffect(() => {
@@ -914,21 +920,6 @@ function App() {
     resetImportState()
   }
 
-  // Quita un color de la paleta de pintura activa: las celdas pintadas con ese color se
-  // desmarcan (para repintarse) y la guía se reasigna al color restante más cercano.
-  const removePaletteColor = (color: string) => {
-    if (palette.length <= 1) return
-    const removedIndex = palette.indexOf(color)
-    const newPalette = palette.filter(c => c !== color)
-    setTargetMap(prev => prev.map(c => (c === color ? nearestPaletteColor(c, newPalette) : c)))
-    setPixels(prev => prev.map(c => (c === color ? null : c)))
-    setPalette(newPalette)
-    setActiveSlot(prev => {
-      if (prev === removedIndex) return 0
-      return prev > removedIndex ? prev - 1 : prev
-    })
-  }
-
   const tools: { id: Tool; icon: string; label: string }[] = [
     { id: 'draw', icon: '✏️', label: 'Draw' },
     { id: 'erase', icon: '🧹', label: 'Erase' },
@@ -1037,7 +1028,7 @@ function App() {
               </button>
               <button
                 className="auto-zoom-btn"
-                onClick={() => setMobileZoom(Math.max(24 / cellSize, MIN_MOBILE_ZOOM))}
+                onClick={() => setMobileZoom(Math.max(MOBILE_TARGET_CELL_PX / cellSize, MIN_MOBILE_ZOOM))}
               >
                 Auto
               </button>
@@ -1069,23 +1060,21 @@ function App() {
         </div>
       </div>
 
-      <div className="palette-bar">
+      <div className="palette-wheel" role="radiogroup" aria-label="Paleta de colores">
         {palette.map((color, i) => (
-          <div
+          <button
             key={i}
-            className={`palette-slot${activeSlot === i ? ' active' : ''}`}
+            type="button"
+            className={`palette-swatch${activeSlot === i ? ' active' : ''}`}
             onClick={() => setActiveSlot(i)}
+            role="radio"
+            aria-checked={activeSlot === i}
+            aria-label={`Color ${i + 1}: ${color}`}
+            title={`Color ${i + 1}: ${color}`}
+            style={{ backgroundColor: color, color: contrastColor(color) }}
           >
-            <div className="palette-swatch" style={{ background: color }} />
-            <span>{i + 1}</span>
-            {palette.length > 1 && (
-              <button
-                className="swatch-remove"
-                title="Quitar color de la paleta"
-                onClick={(e) => { e.stopPropagation(); removePaletteColor(color) }}
-              >✕</button>
-            )}
-          </div>
+            {i + 1}
+          </button>
         ))}
       </div>
       <div className="status-line">
