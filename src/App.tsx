@@ -5,6 +5,7 @@ const MAX_CANVAS_PX = 640
 const MIN_GRID = 8
 const MAX_GRID = 64
 const DEFAULT_GRID = 32
+const MIN_MOBILE_ZOOM = 0.1
 
 type Tool = 'draw' | 'erase' | 'picker'
 type ColorCount = 8 | 16 | 32
@@ -382,6 +383,7 @@ function quantizeImage(img: HTMLImageElement, w: number, h: number, colorCount: 
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasCardRef = useRef<HTMLDivElement>(null)
 
   const [gridW, setGridW] = useState(DEFAULT_GRID)
   const [gridH, setGridH] = useState(DEFAULT_GRID)
@@ -400,6 +402,7 @@ function App() {
   const [activeSlot, setActiveSlot] = useState(0)
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
   const [mobileZoom, setMobileZoom] = useState(1)
+  const [isCanvasPanning, setIsCanvasPanning] = useState(false)
 
   const activeColor = palette[activeSlot] ?? palette[0]
 
@@ -435,6 +438,7 @@ function App() {
   const lastPaintedCellRef = useRef<string | null>(null)
   const touchPointsRef = useRef(new Map<number, { x: number; y: number }>())
   const pinchRef = useRef<{ distance: number; zoom: number } | null>(null)
+  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null)
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 768px)')
@@ -449,7 +453,7 @@ function App() {
       setMobileZoom(1)
       return
     }
-    setMobileZoom(clamp(24 / cellSize, 1, 4))
+    setMobileZoom(Math.max(24 / cellSize, MIN_MOBILE_ZOOM))
   }, [isMobile, cellSize])
 
   useEffect(() => {
@@ -558,32 +562,69 @@ function App() {
     if (isMobile && e.pointerType === 'touch') {
       touchPointsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
-      if (touchPointsRef.current.size === 2) {
-        const [firstPoint, secondPoint] = [...touchPointsRef.current.values()]
-        pinchRef.current = {
-          distance: Math.max(Math.hypot(secondPoint.x - firstPoint.x, secondPoint.y - firstPoint.y), 1),
-          zoom: mobileZoom
+      if (touchPointsRef.current.size >= 2) {
+        if (touchPointsRef.current.size === 2) {
+          const [firstPoint, secondPoint] = [...touchPointsRef.current.values()]
+          pinchRef.current = {
+            distance: Math.max(Math.hypot(secondPoint.x - firstPoint.x, secondPoint.y - firstPoint.y), 1),
+            zoom: mobileZoom
+          }
+        }
+        panStartRef.current = null
+        isPaintingRef.current = false
+        lastPaintedCellRef.current = null
+        e.preventDefault()
+        return
+      }
+
+      if (isCanvasPanning) {
+        const canvasCard = canvasCardRef.current
+        if (canvasCard) {
+          panStartRef.current = {
+            x: e.clientX,
+            y: e.clientY,
+            scrollLeft: canvasCard.scrollLeft,
+            scrollTop: canvasCard.scrollTop
+          }
         }
         isPaintingRef.current = false
         lastPaintedCellRef.current = null
         e.preventDefault()
         return
       }
+
     }
 
     isPaintingRef.current = true
     lastPaintedCellRef.current = paintAtPointer(e)
-  }, [isMobile, mobileZoom, paintAtPointer])
+  }, [isCanvasPanning, isMobile, mobileZoom, paintAtPointer])
 
   const handleCanvasPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isMobile && e.pointerType === 'touch' && touchPointsRef.current.has(e.pointerId)) {
       touchPointsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
       const pinch = pinchRef.current
 
-      if (touchPointsRef.current.size === 2 && pinch) {
+      if (touchPointsRef.current.size >= 2 && pinch) {
         const [firstPoint, secondPoint] = [...touchPointsRef.current.values()]
         const distance = Math.hypot(secondPoint.x - firstPoint.x, secondPoint.y - firstPoint.y)
-        setMobileZoom(clamp(pinch.zoom * distance / pinch.distance, 1, 4))
+        setMobileZoom(Math.max(pinch.zoom * distance / pinch.distance, MIN_MOBILE_ZOOM))
+        e.preventDefault()
+        return
+      }
+
+      if (isCanvasPanning && touchPointsRef.current.size === 1) {
+        const canvasCard = canvasCardRef.current
+        if (canvasCard) {
+          const pan = panStartRef.current ?? {
+            x: e.clientX,
+            y: e.clientY,
+            scrollLeft: canvasCard.scrollLeft,
+            scrollTop: canvasCard.scrollTop
+          }
+          panStartRef.current = pan
+          canvasCard.scrollLeft = pan.scrollLeft - (e.clientX - pan.x)
+          canvasCard.scrollTop = pan.scrollTop - (e.clientY - pan.y)
+        }
         e.preventDefault()
         return
       }
@@ -599,12 +640,13 @@ function App() {
     if (cell !== lastPaintedCellRef.current) {
       lastPaintedCellRef.current = paintAtPointer(e)
     }
-  }, [cellSize, gridW, gridH, isMobile, paintAtPointer])
+  }, [cellSize, gridW, gridH, isCanvasPanning, isMobile, paintAtPointer])
 
   const stopCanvasPainting = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
     touchPointsRef.current.delete(e.pointerId)
     if (touchPointsRef.current.size < 2) pinchRef.current = null
+    panStartRef.current = null
     isPaintingRef.current = false
     lastPaintedCellRef.current = null
   }, [])
@@ -976,9 +1018,9 @@ function App() {
           <div className="canvas-info">{gridW}x{gridH} &nbsp;&nbsp; Layer 1 &nbsp;&nbsp; {Math.round((isMobile ? mobileZoom : 1) * 100)}%</div>
           {isMobile && (
             <div className="mobile-zoom-controls" role="region" aria-label="Controles de zoom">
-              <button 
+              <button
                 className="zoom-btn"
-                onClick={() => setMobileZoom(zoom => clamp(zoom - 0.25, 1, 4))} 
+                onClick={() => setMobileZoom(zoom => Math.max(zoom - 0.25, MIN_MOBILE_ZOOM))}
                 aria-label="Alejar"
               >
                 −
@@ -986,26 +1028,33 @@ function App() {
               <span className="zoom-indicator">
                 {Math.round(mobileZoom * 100)}%
               </span>
-              <button 
+              <button
                 className="zoom-btn"
-                onClick={() => setMobileZoom(zoom => clamp(zoom + 0.25, 1, 4))} 
+                onClick={() => setMobileZoom(zoom => zoom + 0.25)}
                 aria-label="Acercar"
               >
                 +
               </button>
-              <button 
+              <button
                 className="auto-zoom-btn"
-                onClick={() => setMobileZoom(clamp(24 / cellSize, 1, 4))}
+                onClick={() => setMobileZoom(Math.max(24 / cellSize, MIN_MOBILE_ZOOM))}
               >
                 Auto
+              </button>
+              <button
+                className={`move-mode-btn${isCanvasPanning ? ' active' : ''}`}
+                onClick={() => setIsCanvasPanning(panning => !panning)}
+                aria-pressed={isCanvasPanning}
+              >
+                Mover
               </button>
             </div>
           )}
           <div className="paint-guide">
-            Toca, arrastra o haz clic en la cuadrícula para pintar · Pellizca con dos dedos para ajustar el zoom · Números 1-9 seleccionan color · Backspace borra la celda actual.
+            Pellizca con dos dedos para ajustar el zoom · Activa Mover para desplazarte por la cuadrícula · Desactívalo para pintar.
           </div>
 
-          <div className="canvas-card">
+          <div className="canvas-card" ref={canvasCardRef}>
             <canvas
               ref={canvasRef}
               width={canvasPxW}

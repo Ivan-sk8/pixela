@@ -744,8 +744,11 @@
   }
 
   .canvas-card {
+    box-sizing: border-box;
     padding: 8px;
+    width: calc(100vw - 20px);
     max-width: calc(100vw - 20px);
+    max-height: calc(100dvh - 230px);
     overflow: auto;
   }
 
@@ -776,9 +779,16 @@
     cursor: pointer;
   }
 
-  .mobile-zoom-controls button:last-child {
+  .mobile-zoom-controls .auto-zoom-btn,
+  .mobile-zoom-controls .move-mode-btn {
     padding: 0 10px;
     font-size: 11px;
+  }
+
+  .mobile-zoom-controls .move-mode-btn.active {
+    background: var(--color-secondary);
+    border-color: var(--color-secondary-light);
+    color: #2a1600;
   }
 
   .paint-guide {
