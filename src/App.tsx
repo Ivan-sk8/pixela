@@ -433,6 +433,8 @@ function App() {
   const previewSharedCanvasRef = useRef<HTMLCanvasElement>(null)
   const isPaintingRef = useRef(false)
   const lastPaintedCellRef = useRef<string | null>(null)
+  const touchPointsRef = useRef(new Map<number, { x: number; y: number }>())
+  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null)
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 768px)')
@@ -552,11 +554,41 @@ function App() {
 
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId)
+
+    if (isMobile && e.pointerType === 'touch') {
+      touchPointsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (touchPointsRef.current.size === 2) {
+        const [firstPoint, secondPoint] = [...touchPointsRef.current.values()]
+        pinchRef.current = {
+          distance: Math.max(Math.hypot(secondPoint.x - firstPoint.x, secondPoint.y - firstPoint.y), 1),
+          zoom: mobileZoom
+        }
+        isPaintingRef.current = false
+        lastPaintedCellRef.current = null
+        e.preventDefault()
+        return
+      }
+    }
+
     isPaintingRef.current = true
     lastPaintedCellRef.current = paintAtPointer(e)
-  }, [paintAtPointer])
+  }, [isMobile, mobileZoom, paintAtPointer])
 
   const handleCanvasPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isMobile && e.pointerType === 'touch' && touchPointsRef.current.has(e.pointerId)) {
+      touchPointsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const pinch = pinchRef.current
+
+      if (touchPointsRef.current.size === 2 && pinch) {
+        const [firstPoint, secondPoint] = [...touchPointsRef.current.values()]
+        const distance = Math.hypot(secondPoint.x - firstPoint.x, secondPoint.y - firstPoint.y)
+        setMobileZoom(clamp(pinch.zoom * distance / pinch.distance, 1, 4))
+        e.preventDefault()
+        return
+      }
+    }
+
     if (!isPaintingRef.current) return
     const canvas = canvasRef.current
     if (!canvas) return
@@ -567,10 +599,12 @@ function App() {
     if (cell !== lastPaintedCellRef.current) {
       lastPaintedCellRef.current = paintAtPointer(e)
     }
-  }, [cellSize, gridW, gridH, paintAtPointer])
+  }, [cellSize, gridW, gridH, isMobile, paintAtPointer])
 
   const stopCanvasPainting = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    touchPointsRef.current.delete(e.pointerId)
+    if (touchPointsRef.current.size < 2) pinchRef.current = null
     isPaintingRef.current = false
     lastPaintedCellRef.current = null
   }, [])
@@ -939,7 +973,7 @@ function App() {
         </div>
 
         <div className="main-content">
-          <div className="canvas-info">{gridW}x{gridH} &nbsp;&nbsp; Layer 1 &nbsp;&nbsp; 100%</div>
+          <div className="canvas-info">{gridW}x{gridH} &nbsp;&nbsp; Layer 1 &nbsp;&nbsp; {Math.round((isMobile ? mobileZoom : 1) * 100)}%</div>
           {isMobile && (
             <div className="mobile-zoom-controls" role="region" aria-label="Controles de zoom">
               <button 
@@ -968,7 +1002,7 @@ function App() {
             </div>
           )}
           <div className="paint-guide">
-            Toca, arrastra o haz clic en la cuadrícula para pintar · Números 1-9 seleccionan color · Backspace borra la celda actual.
+            Toca, arrastra o haz clic en la cuadrícula para pintar · Pellizca con dos dedos para ajustar el zoom · Números 1-9 seleccionan color · Backspace borra la celda actual.
           </div>
 
           <div className="canvas-card">
